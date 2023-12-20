@@ -2,13 +2,13 @@ fn main() {}
 
 //TODO: correctly handle inputs where length % 3 != 0
 pub fn hex_to_base64(input: &str) -> String {
-    fn prepare_input(chunk: &[u8]) -> [u8; 3] {
+    fn decode(chunk: &[u8]) -> [u8; 3] {
         let mut iter = chunk
             .iter()
-            .map(|c| (*c as char).to_digit(16).unwrap() as u8);
+            .map(|byte| (*byte as char).to_digit(16).unwrap() as u8);
         let mut chunk = [0u8; 3];
-        for b in chunk.iter_mut() {
-            *b = iter.next().unwrap_or(0);
+        for byte in chunk.iter_mut() {
+            *byte = iter.next().unwrap_or(0);
         }
         chunk
     }
@@ -20,11 +20,11 @@ pub fn hex_to_base64(input: &str) -> String {
         ]
     }
 
-    fn b64_to_ascii(b: u8) -> u8 {
-        match b {
-            0x00..=0x19 => b + b'A',
-            0x1a..=0x33 => b - 0x1a + b'a',
-            0x34..=0x3d => b - 0x34 + b'0',
+    fn encode(byte: u8) -> u8 {
+        match byte {
+            0x00..=0x19 => byte + b'A',
+            0x1a..=0x33 => byte - 0x1a + b'a',
+            0x34..=0x3d => byte - 0x34 + b'0',
             0x3e => b'+',
             0x3f => b'/',
             _ => panic!(),
@@ -33,11 +33,11 @@ pub fn hex_to_base64(input: &str) -> String {
 
     let mut result = String::new();
     for chunk in input.as_bytes().chunks(3) {
-        let hex = prepare_input(chunk);
-        convert(hex)
+        let data = decode(chunk);
+        convert(data)
             .iter()
-            .map(|&b| char::from_u32(b64_to_ascii(b) as u32).unwrap())
-            .for_each(|c| result.push(c));
+            .map(|&byte| char::from_u32(encode(byte) as u32).unwrap())
+            .for_each(|char| result.push(char));
     }
     result
 }
