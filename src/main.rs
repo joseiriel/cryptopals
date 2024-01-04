@@ -1,23 +1,25 @@
+use arrayvec::ArrayVec;
+use itertools::Itertools;
+
 fn main() {}
 
-//TODO: correctly handle inputs where length % 3 != 0
 pub fn hex_to_base64(input: &str) -> String {
-    fn decode(chunk: &[u8]) -> [u8; 3] {
-        let mut iter = chunk
-            .iter()
-            .map(|byte| (*byte as char).to_digit(16).unwrap() as u8);
-        let mut chunk = [0u8; 3];
-        for byte in chunk.iter_mut() {
-            *byte = iter.next().unwrap_or(0);
+    fn convert(hex: &[u8]) -> [u8; 2] {
+        fn left(a: u8, b: u8) -> u8 {
+            a << 2 | b >> 2
         }
-        chunk
-    }
 
-    fn convert(hex: [u8; 3]) -> [u8; 2] {
-        [
-            (hex[0] << 2) | (hex[1] >> 2),
-            ((hex[1] & 0b11) << 4) | hex[2],
-        ]
+        fn right(a: u8, b: u8) -> u8 {
+            (a & 0b11) << 4 | b
+        }
+
+        let len = hex.len();
+        match len {
+            3 => [left(hex[0], hex[1]), right(hex[1], hex[2])],
+            2 => [left(hex[0], hex[1]), right(hex[1], 0)],
+            1 => [left(hex[0], 0), 0],
+            _ => panic!(),
+        }
     }
 
     fn encode(byte: u8) -> u8 {
@@ -31,15 +33,21 @@ pub fn hex_to_base64(input: &str) -> String {
         }
     }
 
-    let mut result = String::new();
-    for chunk in input.as_bytes().chunks(3) {
-        let data = decode(chunk);
-        convert(data)
-            .iter()
-            .map(|&byte| char::from_u32(encode(byte) as u32).unwrap())
-            .for_each(|char| result.push(char));
+    let result_length = input.len() / 3 * 2 + input.len() % 3 + 1;
+    let mut result = Vec::with_capacity(result_length);
+    for chunk in &input
+        .chars()
+        .map(|char| char.to_digit(16).unwrap() as u8)
+        .chunks(3)
+    {
+        let hex: ArrayVec<_, 3> = chunk.collect();
+        let data = convert(&hex);
+        for byte in data {
+            result.push(encode(byte));
+        }
     }
-    result
+
+    String::from_utf8(result).unwrap()
 }
 
 #[cfg(test)]
